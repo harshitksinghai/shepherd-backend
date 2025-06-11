@@ -8,5 +8,5 @@ import lombok.Data;
 public class TaskRequestDTO {
     private String title;
     private LocalDateTime dueDate;
-    private String project;
+    private String priority;
 }

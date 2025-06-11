@@ -34,7 +34,7 @@ public class Task {
     private String title;
 
     @Column(nullable = false)
-    private String project;
+    private String priority;
 
     @Column(name = "due_date")
     private LocalDateTime dueDate;
@@ -46,5 +46,4 @@ public class Task {
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
-
 }

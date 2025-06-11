@@ -8,7 +8,7 @@ public class TaskConverter {
         return TaskResponseDTO.builder()
             .title(task.getTitle())
             .dueDate(task.getDueDate())
-            .project(task.getProject())
+            .priority(task.getPriority())
             .build();
     }
 }

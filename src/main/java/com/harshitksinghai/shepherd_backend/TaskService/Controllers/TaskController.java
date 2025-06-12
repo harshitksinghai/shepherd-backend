@@ -42,7 +42,7 @@ public class TaskController {
         return taskService.fetchAllTasks();
     }
 
-    @PutMapping("/update")
+    @PutMapping("/update/{taskId}")
     public ResponseEntity<CommonResponseDTO> updateTask(@PathVariable("taskId") String taskId, @RequestBody TaskRequestDTO taskRequestDTO){
         return taskService.updateTask(taskId, taskRequestDTO);
     }

@@ -1,6 +1,5 @@
 package com.harshitksinghai.shepherd_backend.TaskService.Services.Impl;
 
-import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -39,6 +38,8 @@ public class TaskServiceImpl implements TaskService {
             task.setTitle(taskRequestDTO.getTitle());
             task.setDueDate(OffsetDateTime.parse(taskRequestDTO.getDueDate())); // Simple parse
             task.setPriority(taskRequestDTO.getPriority());
+            task.setApproxTime(taskRequestDTO.getApproxTime());
+            task.setIsDivisible(taskRequestDTO.getIsDivisible());
 
             taskRepository.save(task);
 
@@ -99,6 +100,8 @@ public class TaskServiceImpl implements TaskService {
             task.setTitle(taskRequestDTO.getTitle());
             task.setDueDate(OffsetDateTime.parse(taskRequestDTO.getDueDate())); // Simple parse
             task.setPriority(taskRequestDTO.getPriority());
+            task.setApproxTime(taskRequestDTO.getApproxTime());
+            task.setIsDivisible(taskRequestDTO.getIsDivisible());
 
             taskRepository.save(task);
 

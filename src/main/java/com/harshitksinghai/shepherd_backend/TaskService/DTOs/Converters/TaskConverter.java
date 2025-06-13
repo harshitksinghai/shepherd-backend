@@ -10,6 +10,8 @@ public class TaskConverter {
             .title(task.getTitle())
             .dueDate(task.getDueDate().toString())
             .priority(task.getPriority())
+            .approxTime(task.getApproxTime())
+            .isDivisible(task.getIsDivisible())
             .build();
     }
 }

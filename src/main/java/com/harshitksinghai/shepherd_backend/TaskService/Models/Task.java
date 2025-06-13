@@ -1,6 +1,5 @@
 package com.harshitksinghai.shepherd_backend.TaskService.Models;
 
-import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 
 import org.hibernate.annotations.CreationTimestamp;
@@ -39,6 +38,12 @@ public class Task {
 
     @Column(name = "due_date")
     private OffsetDateTime dueDate;
+    
+    @Column(name = "approx_time")
+    private String approxTime;
+    
+    @Column(name = "is_divisible")
+    private String isDivisible;
     
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

@@ -7,4 +7,6 @@ public class TaskRequestDTO {
     private String title;
     private String dueDate; // String format
     private String priority;
+    private String approxTime;
+    private String isDivisible;
 }

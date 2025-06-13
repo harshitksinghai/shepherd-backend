@@ -1,5 +1,7 @@
 package com.harshitksinghai.shepherd_backend.TaskService.Services.Impl;
 
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -11,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.harshitksinghai.shepherd_backend.TaskService.DTOs.Converters.TaskConverter;
 import com.harshitksinghai.shepherd_backend.TaskService.DTOs.RequestDTO.TaskRequestDTO;
@@ -34,7 +37,7 @@ public class TaskServiceImpl implements TaskService {
             Task task = new Task();
             task.setTaskId(UUID.randomUUID().toString());
             task.setTitle(taskRequestDTO.getTitle());
-            task.setDueDate(taskRequestDTO.getDueDate());
+            task.setDueDate(OffsetDateTime.parse(taskRequestDTO.getDueDate())); // Simple parse
             task.setPriority(taskRequestDTO.getPriority());
 
             taskRepository.save(task);
@@ -53,6 +56,7 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
+    @Transactional
     public ResponseEntity<CommonResponseDTO> deleteTask(String taskId) {
         CommonResponseDTO commonResponseDTO = new CommonResponseDTO();
         try {
@@ -75,7 +79,7 @@ public class TaskServiceImpl implements TaskService {
         List<TaskResponseDTO> taskResponseDTOs = tasks.stream()
                 .map(TaskConverter::TaskToTaskResponseDTO)
                 .collect(Collectors.toList());
-
+        
         return new ResponseEntity<>(taskResponseDTOs, HttpStatus.OK);
     }
 
@@ -93,7 +97,7 @@ public class TaskServiceImpl implements TaskService {
 
             Task task = taskOpt.get();
             task.setTitle(taskRequestDTO.getTitle());
-            task.setDueDate(taskRequestDTO.getDueDate());
+            task.setDueDate(OffsetDateTime.parse(taskRequestDTO.getDueDate())); // Simple parse
             task.setPriority(taskRequestDTO.getPriority());
 
             taskRepository.save(task);

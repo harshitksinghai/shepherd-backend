@@ -180,10 +180,13 @@ public class Scheduler1 {
         System.out.println("=== Task List After Splitting Divisible Tasks ===");
         printTasks(divisibleTaskList);
 
-        // calculate task priority
+        // calculate initial task priority
         List<ScheduledTask> prioritizedTasks = calculatePriorities(divisibleTaskList);
+
         System.out.println("\n=== Task Priorities ===");
         printTaskPriorities(prioritizedTasks);
+
+        //
 
     }
 

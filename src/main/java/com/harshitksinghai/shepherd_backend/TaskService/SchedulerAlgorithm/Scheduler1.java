@@ -129,6 +129,14 @@ public class Scheduler1 {
         }
     }
 
+    //// ScheduledTask
+
+    public record ScheduledTask(
+            Task task,
+            double internalPriority,
+            double initialTaskPriority) {
+    }
+
     ////
 
     public static void taskDataProvider() {
@@ -163,7 +171,7 @@ public class Scheduler1 {
     public static void taskScheduler() {
         // main scheduling method
 
-        // data related
+        // generate time strip
         taskDataProvider();
 
         // taskList after splitting divisible tasks
@@ -173,6 +181,9 @@ public class Scheduler1 {
         printTasks(divisibleTaskList);
 
         // calculate task priority
+        List<ScheduledTask> prioritizedTasks = calculatePriorities(divisibleTaskList);
+        System.out.println("\n=== Task Priorities ===");
+        printTaskPriorities(prioritizedTasks);
 
     }
 
@@ -190,29 +201,59 @@ public class Scheduler1 {
         return divisibleTaskList;
     }
 
+    public static List<ScheduledTask> calculatePriorities(List<Task> tasks) {
+        List<ScheduledTask> scheduledTasks = new ArrayList<>();
+
+        for (Task t : tasks) {
+            if (t.approxHours() == null || t.dueDays() == null)
+                continue;
+
+            double dueHours = daysToHours(t.dueDays());
+            double internalPriority = t.approxHours() / dueHours;
+            double initialTaskPriority = 0.4 * t.externalPriority().weight() + 0.6 * internalPriority;
+
+            scheduledTasks.add(new ScheduledTask(t, internalPriority, initialTaskPriority));
+        }
+
+        return scheduledTasks;
+    }
+
     // more helper methods as needed
 
     public static void printTasks(List<Task> tasks) {
         System.out.printf("%-20s %-8s %-12s %-10s %-5s %-10s %-20s %-5s%n",
-            "Task ID", "Title", "Approx (hrs)", "Due (days)", "Ext. Prio", "Divisible", "Parent Task", "Order"
-        );
-        System.out.println("-------------------------------------------------------------------------------------------");
-    
+                "Task ID", "Title", "Approx (hrs)", "Due (days)", "Ext. Prio", "Divisible", "Parent Task", "Order");
+        System.out
+                .println("-------------------------------------------------------------------------------------------");
+
         for (Task t : tasks) {
             System.out.printf("%-20s %-8s %-12s %-10s %-5s %-10s %-20s %-5s%n",
-                t.taskId(),
-                t.title(),
-                t.approxHours() != null ? t.approxHours() : "-",
-                t.dueDays() != null ? t.dueDays() : "-",
-                t.externalPriority(),
-                Boolean.TRUE.equals(t.isDivisible()) ? "Yes" : "No",
-                t.parentTask() != null ? t.parentTask() : "-",
-                t.order() != null ? t.order() : "-"
-            );
+                    t.taskId(),
+                    t.title(),
+                    t.approxHours() != null ? t.approxHours() : "-",
+                    t.dueDays() != null ? t.dueDays() : "-",
+                    t.externalPriority(),
+                    Boolean.TRUE.equals(t.isDivisible()) ? "Yes" : "No",
+                    t.parentTask() != null ? t.parentTask() : "-",
+                    t.order() != null ? t.order() : "-");
         }
         System.out.println();
         System.out.println();
         System.out.println();
+    }
+
+    public static void printTaskPriorities(List<ScheduledTask> scheduledTasks) {
+        System.out.printf("%-8s %-12s %-10s %-10s%n", "Title", "Internal", "External", "Final");
+        System.out.println("---------------------------------------------");
+    
+        for (ScheduledTask st : scheduledTasks) {
+            System.out.printf("%-8s %-12.4f %-10.2f %-10.4f%n",
+                st.task().title(),
+                st.internalPriority(),
+                st.task().externalPriority().weight(),
+                st.initialTaskPriority()
+            );
+        }
     }
 
     public static Double daysToHours(Double days) {
@@ -220,7 +261,8 @@ public class Scheduler1 {
     }
 
     public static Double hoursToDays(Double hours) {
-        if (hours == null) return null;
+        if (hours == null)
+            return null;
         return hours / 8.0;
     }
 

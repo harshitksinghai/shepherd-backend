@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class Scheduler1 {
 
@@ -134,7 +136,8 @@ public class Scheduler1 {
     public record ScheduledTask(
             Task task,
             double internalPriority,
-            double initialTaskPriority) {
+            double initialTaskPriority,
+            double updatedTaskPriority) {
     }
 
     ////
@@ -186,6 +189,12 @@ public class Scheduler1 {
         System.out.println("\n=== Task Priorities ===");
         printTaskPriorities(prioritizedTasks);
 
+        // enforce sequence rules
+        enforceSequenceRules(prioritizedTasks);
+
+        System.out.println("\n=== Task Priorities After Sequence Rules ===");
+        printTaskPriorities(prioritizedTasks);
+
         //
 
     }
@@ -214,50 +223,58 @@ public class Scheduler1 {
             double dueHours = daysToHours(t.dueDays());
             double internalPriority = t.approxHours() / dueHours;
             double initialTaskPriority = 0.4 * t.externalPriority().weight() + 0.6 * internalPriority;
+            double updatedTaskPriority = initialTaskPriority;
 
-            scheduledTasks.add(new ScheduledTask(t, internalPriority, initialTaskPriority));
+            scheduledTasks.add(new ScheduledTask(t, internalPriority, initialTaskPriority, updatedTaskPriority));
         }
 
         return scheduledTasks;
     }
 
+    /**
+     * Updated enforceSequenceRules method that uses the new adjustSubtaskPriorities
+     * algorithm
+     * This method will be used in taskScheduler to maintain proper task sequencing
+     */
+    public static void enforceSequenceRules(List<ScheduledTask> prioritizedTasks) {
+        System.out.println("\n=== Enforcing Sequence Rules ===");
+
+        // Group tasks by parent - O(n)
+        Map<String, List<ScheduledTask>> taskGroups = groupTasksByParent(prioritizedTasks);
+
+        // Process each group that has subtasks
+        for (Map.Entry<String, List<ScheduledTask>> entry : taskGroups.entrySet()) {
+            String parentId = entry.getKey();
+            List<ScheduledTask> group = entry.getValue();
+
+            // Extract subtasks (tasks with order) from this group
+            List<ScheduledTask> subtasks = extractSubtasks(group);
+
+            if (subtasks.size() > 1) { // Only process if there are multiple subtasks
+                System.out.println("Processing subtasks for parent: " +
+                        (parentId.equals("ROOT") ? "ROOT" : parentId));
+
+                // Sort subtasks by increasing order value (T1, T2, T3...)
+                subtasks.sort((a, b) -> Integer.compare(a.task().order(), b.task().order()));
+
+                // Print before adjustment
+                printSubtaskState("Before adjustment", subtasks);
+
+                // Apply the new priority adjustment algorithm
+                List<ScheduledTask> adjustedSubtasks = adjustSubtaskPriorities(subtasks);
+
+                // Print after adjustment
+                printSubtaskState("After adjustment", adjustedSubtasks);
+
+                // Update the original prioritizedTasks list with adjusted priorities
+                updateOriginalTaskList(prioritizedTasks, adjustedSubtasks);
+            }
+        }
+
+        System.out.println("=== Sequence Rules Enforcement Complete ===\n");
+    }
+
     // more helper methods as needed
-
-    public static void printTasks(List<Task> tasks) {
-        System.out.printf("%-20s %-8s %-12s %-10s %-5s %-10s %-20s %-5s%n",
-                "Task ID", "Title", "Approx (hrs)", "Due (days)", "Ext. Prio", "Divisible", "Parent Task", "Order");
-        System.out
-                .println("-------------------------------------------------------------------------------------------");
-
-        for (Task t : tasks) {
-            System.out.printf("%-20s %-8s %-12s %-10s %-5s %-10s %-20s %-5s%n",
-                    t.taskId(),
-                    t.title(),
-                    t.approxHours() != null ? t.approxHours() : "-",
-                    t.dueDays() != null ? t.dueDays() : "-",
-                    t.externalPriority(),
-                    Boolean.TRUE.equals(t.isDivisible()) ? "Yes" : "No",
-                    t.parentTask() != null ? t.parentTask() : "-",
-                    t.order() != null ? t.order() : "-");
-        }
-        System.out.println();
-        System.out.println();
-        System.out.println();
-    }
-
-    public static void printTaskPriorities(List<ScheduledTask> scheduledTasks) {
-        System.out.printf("%-8s %-12s %-10s %-10s%n", "Title", "Internal", "External", "Final");
-        System.out.println("---------------------------------------------");
-    
-        for (ScheduledTask st : scheduledTasks) {
-            System.out.printf("%-8s %-12.4f %-10.2f %-10.4f%n",
-                st.task().title(),
-                st.internalPriority(),
-                st.task().externalPriority().weight(),
-                st.initialTaskPriority()
-            );
-        }
-    }
 
     public static Double daysToHours(Double days) {
         return days * 8.0;
@@ -268,6 +285,8 @@ public class Scheduler1 {
             return null;
         return hours / 8.0;
     }
+
+    //
 
     public static List<Task> splitDivisibleTask(Task task, double maxPartSizeHours) {
         if (task.approxHours() == null || !Boolean.TRUE.equals(task.isDivisible()))
@@ -298,4 +317,271 @@ public class Scheduler1 {
 
         return parts;
     }
+
+    public static void printTasks(List<Task> tasks) {
+        System.out.printf("%-20s %-8s %-12s %-10s %-5s %-10s %-20s %-5s%n",
+                "Task ID", "Title", "Approx (hrs)", "Due (days)", "Ext. Prio", "Divisible", "Parent Task", "Order");
+        System.out
+                .println("-------------------------------------------------------------------------------------------");
+
+        for (Task t : tasks) {
+            System.out.printf("%-20s %-8s %-12s %-10s %-5s %-10s %-20s %-5s%n",
+                    t.taskId(),
+                    t.title(),
+                    t.approxHours() != null ? t.approxHours() : "-",
+                    t.dueDays() != null ? t.dueDays() : "-",
+                    t.externalPriority(),
+                    Boolean.TRUE.equals(t.isDivisible()) ? "Yes" : "No",
+                    t.parentTask() != null ? t.parentTask() : "-",
+                    t.order() != null ? t.order() : "-");
+        }
+        System.out.println();
+        System.out.println();
+        System.out.println();
+    }
+
+    //
+
+    public static void printTaskPriorities(List<ScheduledTask> scheduledTasks) {
+        System.out.printf("%-8s %-12s %-10s %-10s %-10s%n", "Title", "InternalP", "ExternalP", "InitialTaskP",
+                "UpdatedTaskP");
+        System.out.println("--------------------------------------------------------------");
+
+        for (ScheduledTask st : scheduledTasks) {
+            System.out.printf("%-8s %-12.4f %-10.2f %-10.4f %-10.4f%n",
+                    st.task().title(),
+                    st.internalPriority(),
+                    st.task().externalPriority().weight(),
+                    st.initialTaskPriority(),
+                    st.updatedTaskPriority());
+        }
+    }
+
+    //
+
+    /**
+     * Groups tasks by their parent task ID
+     */
+    private static Map<String, List<ScheduledTask>> groupTasksByParent(List<ScheduledTask> prioritizedTasks) {
+        Map<String, List<ScheduledTask>> taskGroups = new HashMap<>();
+
+        for (ScheduledTask task : prioritizedTasks) {
+            String parentKey = task.task().parentTask() != null ? task.task().parentTask() : "ROOT";
+            taskGroups.computeIfAbsent(parentKey, k -> new ArrayList<>()).add(task);
+        }
+
+        return taskGroups;
+    }
+
+    /**
+     * Extracts only subtasks (tasks with order != null) from a group
+     */
+    private static List<ScheduledTask> extractSubtasks(List<ScheduledTask> group) {
+        return group.stream()
+                .filter(task -> task.task().order() != null)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Helper method to print subtask state for debugging
+     */
+    private static void printSubtaskState(String label, List<ScheduledTask> subtasks) {
+        System.out.println("  " + label + ":");
+        for (ScheduledTask st : subtasks) {
+            System.out.printf("    %s (order: %d, priority: %.3f)%n",
+                    st.task().title(),
+                    st.task().order(),
+                    st.updatedTaskPriority());
+        }
+    }
+
+    /**
+     * Adjusts subtask priorities to maintain both order sequence and priority
+     * hierarchy
+     * Input: subtasks ordered by increasing order value (T1, T2, T3, T4, T5, T6)
+     * Output: subtasks with adjusted priorities maintaining correct sequence
+     * 
+     * Time Complexity: O(n^2 * iterations) where iterations is typically 1-2
+     * Space Complexity: O(n) for additional lists
+     */
+    public static List<ScheduledTask> adjustSubtaskPriorities(List<ScheduledTask> subtasksOrderedByOrder) {
+        List<ScheduledTask> finalAdjustedList = new ArrayList<>(subtasksOrderedByOrder);
+        int loopCount = 0;
+
+        // Repeat until final check passes
+        while (true) {
+            // Step 1: Sort subtasks by descending priority, save in new list
+            List<ScheduledTask> sortedByPriority = new ArrayList<>(finalAdjustedList);
+            sortedByPriority.sort((a, b) -> Double.compare(b.updatedTaskPriority(), a.updatedTaskPriority()));
+
+            // Step 2 & 3: Find tasks that are already in correct increasing order in the
+            // sorted list
+            List<ScheduledTask> orderedList = findCorrectlyOrderedTasks(sortedByPriority);
+
+            // Step 4-8: Adjust priorities for tasks not in ordered list
+            adjustPrioritiesForViolatedTasks(finalAdjustedList, orderedList);
+
+            // Step 9: Final check - verify both conditions are met
+            if (isFinalOrderCorrect(finalAdjustedList)) {
+                break; // Final check passed, return result
+            }
+
+            System.out.println();
+            System.out.println("LoopCount: " + loopCount);
+            printAdjustmentStep(sortedByPriority, orderedList, finalAdjustedList);
+            System.out.println();
+
+            // If check failed, repeat the process
+        }
+
+        System.out.println();
+
+        return finalAdjustedList;
+    }
+
+    /**
+     * Step 2 & 3: Find tasks in sorted list that maintain increasing order value
+     * Example: If sorted list is [T4, T6, T1, T3, T5, T2], returns [T4, T6] since 4
+     * < 6
+     */
+    private static List<ScheduledTask> findCorrectlyOrderedTasks(List<ScheduledTask> sortedByPriority) {
+        List<ScheduledTask> orderedList = new ArrayList<>();
+
+        if (!sortedByPriority.isEmpty()) {
+            orderedList.add(sortedByPriority.get(0)); // First task is always considered ordered
+
+            for (int i = 1; i < sortedByPriority.size(); i++) {
+                ScheduledTask current = sortedByPriority.get(i);
+                ScheduledTask previous = orderedList.get(orderedList.size() - 1);
+
+                // Check if current task maintains increasing order
+                if (current.task().order() > previous.task().order()) {
+                    orderedList.add(current);
+                } else {
+                    break; // Stop at first order violation
+                }
+            }
+        }
+
+        return orderedList;
+    }
+
+    /**
+     * Steps 4-8: Adjust priorities for tasks not in ordered list
+     */
+    private static void adjustPrioritiesForViolatedTasks(List<ScheduledTask> subtasksOrderedByOrder,
+            List<ScheduledTask> orderedList) {
+        // Create set for O(1) lookup
+        Set<String> orderedTaskIds = orderedList.stream()
+                .map(t -> t.task().taskId())
+                .collect(Collectors.toSet());
+
+        // Step 4 & 5: Iterate through initial subtasks with updatedPriority = 0
+        for (int i = 0; i < subtasksOrderedByOrder.size(); i++) {
+            ScheduledTask taskA = subtasksOrderedByOrder.get(i);
+
+            // Step 6: Check if task not in ordered list
+            if (!orderedTaskIds.contains(taskA.task().taskId())) {
+                double updatedPriority = taskA.updatedTaskPriority();
+
+                // Step 7 & 8: Internal loop starting from next task
+                for (int j = i + 1; j < subtasksOrderedByOrder.size(); j++) {
+                    ScheduledTask taskB = subtasksOrderedByOrder.get(j);
+
+                    // Apply formula: updatedPriority += abs(taskA.priority - taskB.priority)
+                    updatedPriority += Math.abs(taskA.updatedTaskPriority() - taskB.updatedTaskPriority());
+
+                    // Check if taskB exists in orderedList
+                    if (orderedTaskIds.contains(taskB.task().taskId())) {
+                        // Stop internal loop and update taskA priority
+                        ScheduledTask adjustedTaskA = taskA.withUpdatedPriority(updatedPriority);
+                        subtasksOrderedByOrder.set(i, adjustedTaskA);
+                        break;
+                    }
+                    // If taskB not in orderedList, continue internal loop
+                }
+
+                // If we completed the inner loop without finding an ordered task,
+                // still update the priority
+                if (j == subtasksOrderedByOrder.size()) {
+                    ScheduledTask adjustedTaskA = taskA.withUpdatedPriority(updatedPriority);
+                    subtasksOrderedByOrder.set(i, adjustedTaskA);
+                }
+            }
+        }
+    }
+
+    /**
+     * Step 9: Final check - verify list has increasing order value AND decreasing
+     * priority
+     */
+    private static boolean isFinalOrderCorrect(List<ScheduledTask> finalAdjustedList) {
+        if (finalAdjustedList.size() <= 1) {
+            return true;
+        }
+
+        for (int i = 0; i < finalAdjustedList.size() - 1; i++) {
+            ScheduledTask current = finalAdjustedList.get(i);
+            ScheduledTask next = finalAdjustedList.get(i + 1);
+
+            // Check both conditions:
+            // 1. Increasing order value
+            // 2. Decreasing or equal priority (current >= next)
+            if (current.task().order() >= next.task().order() ||
+                    current.updatedTaskPriority() < next.updatedTaskPriority()) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Helper method to print debugging information
+     */
+    private static void printAdjustmentStep(List<ScheduledTask> sortedByPriority,
+            List<ScheduledTask> orderedList,
+            List<ScheduledTask> finalList) {
+        System.out.println("=== Priority Adjustment Step ===");
+
+        System.out.print("Sorted by priority: ");
+        for (ScheduledTask t : sortedByPriority) {
+            System.out.printf("%s(%.2f) ", t.task().title(), t.updatedTaskPriority());
+        }
+        System.out.println();
+
+        System.out.print("Correctly ordered: ");
+        for (ScheduledTask t : orderedList) {
+            System.out.printf("%s ", t.task().title());
+        }
+        System.out.println();
+
+        System.out.print("Final adjusted: ");
+        for (ScheduledTask t : finalList) {
+            System.out.printf("%s(%.2f) ", t.task().title(), t.updatedTaskPriority());
+        }
+        System.out.println("\n");
+    }
+
+    /**
+     * Update the original prioritized tasks list with adjusted subtask priorities
+     */
+    private static void updateOriginalTaskList(List<ScheduledTask> originalList, List<ScheduledTask> adjustedSubtasks) {
+        // Create a map for O(1) lookup of adjusted tasks
+        Map<String, ScheduledTask> adjustedTaskMap = adjustedSubtasks.stream()
+                .collect(Collectors.toMap(t -> t.task().taskId(), t -> t));
+
+        // Update original list
+        for (int i = 0; i < originalList.size(); i++) {
+            ScheduledTask original = originalList.get(i);
+            ScheduledTask adjusted = adjustedTaskMap.get(original.task().taskId());
+
+            if (adjusted != null) {
+                originalList.set(i, adjusted);
+            }
+        }
+    }
+
+    //
+
 }
